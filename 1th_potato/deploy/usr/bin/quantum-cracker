@@ -1,0 +1,9 @@
+#!/bin/bash
+
+if [ -z "$1" ] || [ ! -f "$1" ]; then
+    echo "quantum-cracker - quantum computing based password cracker"
+    echo "USAGE: $0 <file>"
+    exit 1
+fi
+
+sha256sum $1 | awk "{ print \$1, \"$(whoami)\" }" | sha256sum | awk '{ print $1 }'

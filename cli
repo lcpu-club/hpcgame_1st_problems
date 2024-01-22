@@ -1,0 +1,16 @@
+#!/usr/bin/php
+<?php
+
+$command = $argv[1];
+
+$command_create = function () {
+    global $argv;
+    $name = $argv[2];
+    if (file_exists($argv[2])) {
+        return;
+    }
+    `cp _template $name -R`;
+    `go work use $name/judge`;
+};
+
+call_user_func(${'command_' . $command});

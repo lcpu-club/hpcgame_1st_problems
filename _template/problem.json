@@ -1,0 +1,62 @@
+{
+  "$schema": "../schema.json",
+  "label": "hpc",
+  "submit": {
+    "form": {
+      "files": [
+        {
+          "path": ".metadata.json",
+          "label": "Metadata",
+          "type": {
+            "metadata": {
+              "items": [
+                {
+                  "key": "language",
+                  "label": "Language",
+                  "type": {
+                    "select": {
+                      "options": [
+                        "C++",
+                        "C++11",
+                        "C++14",
+                        "Python2",
+                        "Python3"
+                      ]
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        },
+        {
+          "path": "answer.code",
+          "type": {
+            "editor": {
+              "language": "cpp"
+            }
+          },
+          "label": "Source Code"
+        }
+      ]
+    }
+  },
+  "judge": {
+    "adapter": "hpc",
+    "config": {
+      "entrance": {
+        "script": "judge.sh",
+        "command": ""
+      },
+      "environment": {
+        "tags": [],
+        "exclude-tags": [],
+        "script-limits": {
+          "cpu": 200,
+          "memory": 4096
+        },
+        "estimated-resource": {}
+      }
+    }
+  }
+}

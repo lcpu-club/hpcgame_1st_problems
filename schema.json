@@ -1,0 +1,148 @@
+{
+  "type": "object",
+  "properties": {
+    "label": {
+      "type": "string"
+    },
+    "solution": {
+      "description": "Solution configuration",
+      "type": "object",
+      "properties": {
+        "maxSize": {
+          "type": "integer"
+        }
+      }
+    },
+    "judge": {
+      "description": "Judge configuration",
+      "type": "object",
+      "properties": {
+        "adapter": {
+          "type": "string"
+        },
+        "config": {
+          "type": "object",
+          "patternProperties": {
+            "^(.*)$": {}
+          }
+        }
+      },
+      "required": [
+        "adapter",
+        "config"
+      ]
+    },
+    "submit": {
+      "type": "object",
+      "properties": {
+        "upload": {
+          "description": "Direct upload solution file",
+          "type": "boolean"
+        },
+        "zipFolder": {
+          "description": "Select a folder and submit the compressed zip file",
+          "type": "boolean"
+        },
+        "form": {
+          "description": "Fill in form and generate zip file",
+          "type": "object",
+          "properties": {
+            "files": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "path": {
+                    "type": "string"
+                  },
+                  "label": {
+                    "type": "string"
+                  },
+                  "description": {
+                    "type": "string"
+                  },
+                  "type": {
+                    "type": "object",
+                    "properties": {
+                      "editor": {
+                        "description": "Editor configuration",
+                        "type": "object",
+                        "properties": {
+                          "language": {
+                            "type": "string"
+                          }
+                        }
+                      },
+                      "metadata": {
+                        "description": "Metadata form configuration",
+                        "type": "object",
+                        "properties": {
+                          "items": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "key": {
+                                  "type": "string"
+                                },
+                                "label": {
+                                  "type": "string"
+                                },
+                                "description": {
+                                  "type": "string"
+                                },
+                                "type": {
+                                  "type": "object",
+                                  "properties": {
+                                    "text": {
+                                      "type": "object",
+                                      "properties": {}
+                                    },
+                                    "select": {
+                                      "type": "object",
+                                      "properties": {
+                                        "options": {
+                                          "type": "array",
+                                          "items": {
+                                            "type": "string"
+                                          }
+                                        }
+                                      },
+                                      "required": [
+                                        "options"
+                                      ]
+                                    }
+                                  }
+                                }
+                              },
+                              "required": [
+                                "key",
+                                "type"
+                              ]
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "required": [
+                  "path",
+                  "type"
+                ]
+              }
+            }
+          },
+          "required": [
+            "files"
+          ]
+        }
+      }
+    }
+  },
+  "required": [
+    "label",
+    "judge",
+    "submit"
+  ]
+}

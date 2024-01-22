@@ -1,0 +1,13 @@
+{
+  "$schema": "../schema.json",
+  "label": "hpc",
+  "submit": {
+    "form": {
+      "files": []
+    }
+  },
+  "judge": {
+    "adapter": "mkaccount",
+    "config": {}
+  }
+}
