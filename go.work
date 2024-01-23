@@ -1,11 +1,14 @@
 go 1.21.3
 
 use (
+	./1th_compile/judge
+	./1th_conway3d/judge
 	./1th_hubbard/judge
 	./1th_logistic/judge
 	./1th_mul/judge
 	./1th_overlap/judge
 	./1th_potato/judge
 	./1th_qa/judge
+	./1th_ray/judge
 	./_template/judge
 )

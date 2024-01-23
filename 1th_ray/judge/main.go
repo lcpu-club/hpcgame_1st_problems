@@ -12,23 +12,21 @@ import (
 
 type PointConfigure struct {
 	PointConfigureBase
-	In           string
-	Ans          string
+	Conf         string
+	Ref          string
 	Time         time.Duration
 	TimeStr      string
 	MaxScoreTime time.Duration
 	MinScore     float64
-	N            int
 }
 
 func Point(
-	n int, in, ans, timeStr string, maxScoreTime float64, minScore, maxScore float64,
+	conf, ref, timeStr string, maxScoreTime float64, minScore, maxScore float64,
 ) *PointConfigure {
 	t, _ := ParseTime(timeStr)
 	return &PointConfigure{
-		N:            n,
-		In:           in,
-		Ans:          ans,
+		Conf:         conf,
+		Ref:          ref,
 		Time:         t,
 		TimeStr:      timeStr,
 		MaxScoreTime: time.Duration(maxScoreTime * float64(time.Second)),
@@ -40,34 +38,34 @@ func Point(
 }
 
 var points = []PointConfigureInterface{
-	Point(2048, "256.dat", "256.dat.out", "00:00:03", 0.66, 1, 10),
-	Point(1024, "512.dat", "512.dat.out", "00:00:09", 1.15, 1, 20),
-	Point(1024, "1024.dat", "1024.dat.out", "00:01:00", 6.70, 1, 70),
+	Point("conf_1.data", "ref_1.data", "00:01:00", 1.5, 10, 50),
+	Point("conf_2.data", "ref_2.data", "00:02:00", 3.0, 10, 50),
 }
-
-const base = "/lustre/shared_data/conway/455f8753bd36923c7333f391b8c78076/"
 
 func judge(j *StandardJudger, point int, conf interface{}) (*Result, error) {
 	pnt := conf.(*PointConfigure)
 	var duration time.Duration
-	inRaw := base + pnt.In
-	in := pnt.In
-	_, _, _, err := RunCommand("cp", inRaw, in)
+	cnf := GetProblemPath(pnt.Conf)
+	ref := GetProblemPath(pnt.Ref)
+	err := MaskRead(ref)
 	if err != nil {
-		return nil, fmt.Errorf("copy input file failed: %w", err)
+		return nil, err
 	}
-	defer os.Remove(in)
-	ans := base + pnt.Ans
-	job, err := SlurmAlloc("-p", "GPU40G", "--gres=gpu:1")
+	job, err := SlurmAlloc("-p", "C064M0256G", "-N1", "-n8")
 	if err != nil {
-		return nil, fmt.Errorf("alloc job failed: %w", err)
+		return nil, err
 	}
 	defer job.Cancel()
+	err = os.Symlink(cnf, "conf.data")
+	if err != nil {
+		return nil, err
+	}
+	defer os.Remove("conf.data")
 	out := "out.data"
 	defer os.Remove(out)
-	cmd := job.Command(nil, "time", "-f", "%E %M", "-o", "time.out", "./answer", in, out, strconv.Itoa(pnt.N))
+	cmd := job.Command(nil, "time", "-f", "%E %M", "-o", "time.out", "./answer")
 	defer os.Remove("time.out")
-	// cmd.Env = append(os.Environ(), "OMP_NUM_THREADS=8")
+	cmd.Env = append(os.Environ(), "OMP_NUM_THREADS=8")
 	finCh := make(chan bool)
 	tCh := CommandTimeout(cmd, pnt.Time, finCh)
 	var stdout, stderr []byte
@@ -88,16 +86,18 @@ func judge(j *StandardJudger, point int, conf interface{}) (*Result, error) {
 		return &Result{
 			Score:           0,
 			Message:         "Runtime Error",
-			DetailedMessage: strings.ReplaceAll(fmt.Sprintf("%v%v", string(stdout), string(stderr)), base, "<hidden>"),
+			DetailedMessage: fmt.Sprintf("%v%v", string(stdout), string(stderr)),
 		}, nil
+	}
+	err = Unmask(ref)
+	if err != nil {
+		return nil, err
 	}
 	timeOut, err := os.ReadFile("time.out")
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println("time.out:", string(timeOut))
-	timeOutS, _, _ := strings.Cut(TrimBlank(string(timeOut)), "\n")
-	wallStr, memStr, ok := strings.Cut(TrimBlank(timeOutS), " ")
+	wallStr, memStr, ok := strings.Cut(TrimBlank(string(timeOut)), " ")
 	if !ok {
 		return nil, errors.New("time.out format error")
 	}
@@ -115,7 +115,7 @@ func judge(j *StandardJudger, point int, conf interface{}) (*Result, error) {
 	}
 	fmt.Println("starting to compare")
 	cmp := NewBinaryComparer()
-	err = cmp.CompareFile(out, ans)
+	err = cmp.CompareFile(ref, out)
 	if err != nil {
 		return &Result{
 			Score:           0,
@@ -153,13 +153,7 @@ func before(j *StandardJudger) error {
 	if err != nil {
 		return err
 	}
-	compareJob, err := SlurmAlloc("-p", "GPU", "--gres=gpu:1")
-	if err != nil {
-		return err
-	}
-	defer compareJob.Cancel()
-	compileCmd := compareJob.Command(nil, "/usr/local/cuda/bin/nvcc", "-O3", "-o", "answer", "answer.cu")
-	stdout, stderr, stat, err := WaitCommandAndGetOutput(compileCmd)
+	stdout, stderr, stat, err := RunCommand("g++", "-O3", "-fopenmp", "-mavx512f", "-o", "answer", "answer.cpp")
 	if stat != 0 || err != nil {
 		defer j.Halt()
 		ReportMessage(ResultToMap(&Result{
@@ -169,6 +163,7 @@ func before(j *StandardJudger) error {
 		}, ResultFinal))
 		return ErrCompileFailed
 	}
+	defer RunCommand("make", "clean")
 	return nil
 }
 

@@ -41,7 +41,7 @@ func Point(
 var points = []PointConfigureInterface{
 	Point("1G.bin", "1G.out", "00:00:03", 1.40, 1, 15),
 	Point("4G.bin", "4G.out", "00:00:08", 2.75, 1, 35),
-	Point("16G.bin", "16G.out", "00:00:20", 4.20, 1, 50),
+	Point("16G.bin", "16G.out", "00:00:20", 6.30, 1, 50),
 }
 
 func judge(j *StandardJudger, point int, conf interface{}) (*Result, error) {
