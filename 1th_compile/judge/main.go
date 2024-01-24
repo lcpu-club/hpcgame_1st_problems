@@ -34,7 +34,7 @@ var points = []PointConfigureInterface{
 
 func judge(j *StandardJudger, point int, conf interface{}) (*Result, error) {
 	pnt := conf.(*PointConfigure)
-	job, err := SlurmAlloc("-p", "C064M0256G", "-N1", "-n8", "-t", pnt.TimeStr)
+	job, err := SlurmAlloc("-p", "GPU40G", "-N1", "-n8", "-t", pnt.TimeStr)
 	if err != nil {
 		return nil, err
 	}
