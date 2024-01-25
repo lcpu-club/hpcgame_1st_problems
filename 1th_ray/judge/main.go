@@ -3,17 +3,20 @@ package main
 import (
 	"errors"
 	"fmt"
+	"log"
 	"math"
+	"math/rand"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 type PointConfigure struct {
 	PointConfigureBase
-	Conf         string
-	Ref          string
 	Time         time.Duration
 	TimeStr      string
 	MaxScoreTime time.Duration
@@ -21,51 +24,132 @@ type PointConfigure struct {
 }
 
 func Point(
-	conf, ref, timeStr string, maxScoreTime float64, minScore, maxScore float64,
+	timeStr string, maxScoreTime float64, minScore, maxScore float64,
 ) *PointConfigure {
 	t, _ := ParseTime(timeStr)
 	return &PointConfigure{
-		Conf:         conf,
-		Ref:          ref,
+		PointConfigureBase: PointConfigureBase{
+			MaxScore: maxScore,
+		},
 		Time:         t,
 		TimeStr:      timeStr,
 		MaxScoreTime: time.Duration(maxScoreTime * float64(time.Second)),
 		MinScore:     minScore,
-		PointConfigureBase: PointConfigureBase{
-			MaxScore: maxScore,
-		},
 	}
 }
 
 var points = []PointConfigureInterface{
-	Point("conf_1.data", "ref_1.data", "00:01:00", 1.5, 10, 50),
-	Point("conf_2.data", "ref_2.data", "00:02:00", 3.0, 10, 50),
+	Point("00:06:40", 200, 1, 100),
 }
 
 func judge(j *StandardJudger, point int, conf interface{}) (*Result, error) {
 	pnt := conf.(*PointConfigure)
 	var duration time.Duration
-	cnf := GetProblemPath(pnt.Conf)
-	ref := GetProblemPath(pnt.Ref)
-	err := MaskRead(ref)
-	if err != nil {
-		return nil, err
-	}
-	job, err := SlurmAlloc("-p", "C064M0256G", "-N1", "-n8")
+	job, err := SlurmAlloc("-p", "C064M0256G", "-N4", "--ntasks-per-node=8", "-n32")
 	if err != nil {
 		return nil, err
 	}
 	defer job.Cancel()
-	err = os.Symlink(cnf, "conf.data")
+	// **** Fetch hostname ****
+	hostnameStr, _, _, err := WaitCommandAndGetOutput(job.Command(nil, "hostname"))
+	if err != nil {
+		log.Println("hostname error")
+		return nil, err
+	}
+	hostnameArr := strings.Split(TrimBlank(string(hostnameStr)), "\n")
+	if len(hostnameArr) != 4 {
+		return nil, errors.New("hostname error")
+	}
+	masterHost := hostnameArr[0]
+	slaveHosts := hostnameArr[1:]
+	// ---- End ----
+	// **** Init Ray Cluster ****
+	ipAddrRaw, _, _, err := WaitCommandAndGetOutput(job.ShellCommand([]string{"-w", masterHost}, "hostname -I | awk '{ print $2 }'"))
+	if err != nil {
+		return nil, errors.New("get ip error")
+	}
+
+	rand.Seed(time.Now().UnixNano())
+	portNum := strconv.Itoa(rand.Intn(3500) + 36500)
+	masterIPAddr := TrimBlank(string(ipAddrRaw))
+	ReportMessage(ResultToMap(
+		&Result{
+			Score: 0,
+			// Message:         "Running",
+			Message: fmt.Sprintf("master: %v:%v", masterIPAddr, portNum),
+		}, ResultPartial,
+	))
+	rayTmp := filepath.Join("/tmp/h_rayT_" + portNum + "_" + uuid.New().String()[:6])
+	// wd, _ := os.Getwd()
+	// rayTmp := filepath.Join(wd, "ray_tmp")
+	masterCmd := job.Command([]string{"-w", masterHost, "-n1", "--cores-per-socket=4", "--sockets-per-node=1", "--exact"}, "ray", "start", "--node-ip-address", masterIPAddr, "--head", "--port", portNum, "--num-cpus", "4", "--include-dashboard=false", "--temp-dir", rayTmp, "--block")
+	masterCmd.Stdout = os.Stdout
+	masterCmd.Stderr = os.Stderr
+	err = masterCmd.Start()
+	if err != nil {
+		ReportMessage(ResultToMap(
+			&Result{
+				Score: 0,
+				// Message:         "Running",
+				Message: fmt.Sprintf("master ray error: %v", err.Error()),
+			}, ResultPartial,
+		))
+		return nil, err
+	}
+	ReportMessage(ResultToMap(
+		&Result{
+			Score: 0,
+			// Message:         "Running",
+			Message: fmt.Sprintf("master ray started: %v:%v", masterIPAddr, portNum),
+		}, ResultPartial,
+	))
+	time.Sleep(5 * time.Second)
+	slaveCmd := job.Command([]string{"-w", strings.Join(slaveHosts, ",")}, "ray", "start", fmt.Sprintf("--address=%v:%v", masterIPAddr, portNum), "--num-cpus", "4", "--block")
+	slaveCmd.Stderr = os.Stderr
+	slaveCmd.Stdout = os.Stdout
+	err = slaveCmd.Start()
+	if err != nil {
+		ReportMessage(ResultToMap(
+			&Result{
+				Score: 0,
+				// Message:         "Running",
+				Message: fmt.Sprintf("slave ray error: %v", err.Error()),
+			}, ResultPartial,
+		))
+		return nil, err
+	}
+	time.Sleep(5 * time.Second)
+	ReportMessage(ResultToMap(
+		&Result{
+			Score: 0,
+			// Message:         "Running",
+			Message: fmt.Sprintf("slave ray started: %v:%v", masterIPAddr, portNum),
+		}, ResultPartial,
+	))
+	defer masterCmd.Process.Kill()
+	defer slaveCmd.Process.Kill()
+
+	err = os.Symlink("/lustre/shared_data/ray/820ede54516fbcb6319ca8dc048d1cfe/inputs", "./inputs")
 	if err != nil {
 		return nil, err
 	}
-	defer os.Remove("conf.data")
-	out := "out.data"
-	defer os.Remove(out)
-	cmd := job.Command(nil, "time", "-f", "%E %M", "-o", "time.out", "./answer")
+	defer os.Remove("./inputs")
+	err = os.Symlink("/lustre/shared_data/ray/820ede54516fbcb6319ca8dc048d1cfe/weights", "./weights")
+	if err != nil {
+		return nil, err
+	}
+	defer os.Remove("./weights")
+	ReportMessage(ResultToMap(
+		&Result{
+			Score: 0,
+			// Message:         "Running",
+			Message: "problem environment prepared",
+		}, ResultPartial,
+	))
+	// ---- End ----
+	cmd := job.Command([]string{"-w", masterHost, "-n1", "--exact"}, "time", "-f", "%E %M", "-o", "time.out", "python3", "main.py")
 	defer os.Remove("time.out")
-	cmd.Env = append(os.Environ(), "OMP_NUM_THREADS=8")
+	cmd.Env = append(os.Environ(), "RAY_CLUSTER_ADDR="+masterIPAddr+":"+portNum)
 	finCh := make(chan bool)
 	tCh := CommandTimeout(cmd, pnt.Time, finCh)
 	var stdout, stderr []byte
@@ -89,10 +173,6 @@ func judge(j *StandardJudger, point int, conf interface{}) (*Result, error) {
 			DetailedMessage: fmt.Sprintf("%v%v", string(stdout), string(stderr)),
 		}, nil
 	}
-	err = Unmask(ref)
-	if err != nil {
-		return nil, err
-	}
 	timeOut, err := os.ReadFile("time.out")
 	if err != nil {
 		return nil, err
@@ -114,8 +194,27 @@ func judge(j *StandardJudger, point int, conf interface{}) (*Result, error) {
 		"mem":  MemKBToString(mem),
 	}
 	fmt.Println("starting to compare")
-	cmp := NewBinaryComparer()
-	err = cmp.CompareFile(ref, out)
+	ReportMessage(ResultToMap(
+		&Result{
+			Score: 0,
+			// Message:         "Running",
+			Message: "comparing result",
+		}, ResultPartial,
+	))
+	cmpJob, err := SlurmAlloc("-N1", "-n1")
+	if err != nil {
+		return nil, err
+	}
+	defer cmpJob.Cancel()
+	cmpCmd := cmpJob.Command(nil, "python3", GetProblemPath("compare.py"))
+	cmpOut, _, _, err := WaitCommandAndGetOutput(cmpCmd)
+	if TrimBlank(string(cmpOut)) != "all equal" {
+		if err == nil {
+			err = errors.New(TrimBlank(string(cmpOut)))
+		} else {
+			err = fmt.Errorf("%v\n%v", err, TrimBlank(string(cmpOut)))
+		}
+	}
 	if err != nil {
 		return &Result{
 			Score:           0,
@@ -151,19 +250,9 @@ var ErrCompileFailed = errors.New("compile error")
 func before(j *StandardJudger) error {
 	err := UnarchiveSolution(".")
 	if err != nil {
+		j.Halt()
 		return err
 	}
-	stdout, stderr, stat, err := RunCommand("g++", "-O3", "-fopenmp", "-mavx512f", "-o", "answer", "answer.cpp")
-	if stat != 0 || err != nil {
-		defer j.Halt()
-		ReportMessage(ResultToMap(&Result{
-			Score:           0,
-			Message:         "Compile Error",
-			DetailedMessage: string(stderr) + string(stdout) + err.Error(),
-		}, ResultFinal))
-		return ErrCompileFailed
-	}
-	defer RunCommand("make", "clean")
 	return nil
 }
 

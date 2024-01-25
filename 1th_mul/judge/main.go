@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -13,7 +14,7 @@ import (
 type PointConfigure struct {
 	PointConfigureBase
 	Conf         string
-	Ref          string
+	Ans          string
 	Time         time.Duration
 	TimeStr      string
 	MaxScoreTime time.Duration
@@ -21,12 +22,12 @@ type PointConfigure struct {
 }
 
 func Point(
-	conf, ref, timeStr string, maxScoreTime float64, minScore, maxScore float64,
+	conf, ans, timeStr string, maxScoreTime float64, minScore, maxScore float64,
 ) *PointConfigure {
 	t, _ := ParseTime(timeStr)
 	return &PointConfigure{
 		Conf:         conf,
-		Ref:          ref,
+		Ans:          ans,
 		Time:         t,
 		TimeStr:      timeStr,
 		MaxScoreTime: time.Duration(maxScoreTime * float64(time.Second)),
@@ -38,32 +39,32 @@ func Point(
 }
 
 var points = []PointConfigureInterface{
-	Point("conf_1.data", "ref_1.data", "00:01:00", 1.5, 10, 50),
-	Point("conf_2.data", "ref_2.data", "00:02:00", 3.0, 10, 50),
+	Point("conf_0.data", "ans_0.data", "00:00:01", 0.10, 2, 2),
+	Point("conf_1.data", "ans_1.data", "00:00:50", 2.60, 2, 18),
+	Point("conf_2.data", "ans_2.data", "00:01:40", 5.00, 3, 40),
+	Point("conf_3.data", "ans_3.data", "00:03:20", 9.60, 3, 40),
 }
 
 func judge(j *StandardJudger, point int, conf interface{}) (*Result, error) {
 	pnt := conf.(*PointConfigure)
 	var duration time.Duration
-	cnf := GetProblemPath(pnt.Conf)
-	ref := GetProblemPath(pnt.Ref)
-	err := MaskRead(ref)
-	if err != nil {
-		return nil, err
-	}
+	cnf := pnt.Conf
+	ans := "/lustre/shared_data/mul/ad1b1b4e3ae715d07720a2c1324485cd/" + pnt.Ans
 	job, err := SlurmAlloc("-p", "C064M0256G", "-N1", "-n8")
 	if err != nil {
 		return nil, err
 	}
 	defer job.Cancel()
-	err = os.Symlink(cnf, "conf.data")
+	memdiskCmd := job.Command(nil, "bash", GetProblemPath("prepare_memdisk.sh"), cnf)
+	memOut, memErr, _, err := WaitCommandAndGetOutput(memdiskCmd)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("prepare memdisk error: %w\n%v\n%v", err, string(memOut), string(memErr))
 	}
-	defer os.Remove("conf.data")
+	defer WaitCommandAndGetOutput(job.Command(nil, "bash", GetProblemPath("clean_memdisk.sh")))
 	out := "out.data"
 	defer os.Remove(out)
-	cmd := job.Command(nil, "time", "-f", "%E %M", "-o", "time.out", "./answer")
+	wd, _ := os.Getwd()
+	cmd := job.Command([]string{"-D", filepath.Join(wd, "memdisk")}, "time", "-f", "%E %M", "-o", filepath.Join(wd, "time.out"), filepath.Join(wd, "answer"))
 	defer os.Remove("time.out")
 	cmd.Env = append(os.Environ(), "OMP_NUM_THREADS=8")
 	finCh := make(chan bool)
@@ -86,12 +87,16 @@ func judge(j *StandardJudger, point int, conf interface{}) (*Result, error) {
 		return &Result{
 			Score:           0,
 			Message:         "Runtime Error",
-			DetailedMessage: fmt.Sprintf("%v%v", string(stdout), string(stderr)),
+			DetailedMessage: fmt.Sprintf("%v%v%v", string(stdout), string(stderr), err),
 		}, nil
 	}
-	err = Unmask(ref)
+	_, _, _, err = WaitCommandAndGetOutput(job.Command(nil, "cp", "memdisk/out.data", "out.data"))
 	if err != nil {
-		return nil, err
+		return &Result{
+			Score:           0,
+			Message:         "Runtime Error",
+			DetailedMessage: "copy out.data error",
+		}, nil
 	}
 	timeOut, err := os.ReadFile("time.out")
 	if err != nil {
@@ -115,7 +120,7 @@ func judge(j *StandardJudger, point int, conf interface{}) (*Result, error) {
 	}
 	fmt.Println("starting to compare")
 	cmp := NewBinaryComparer()
-	err = cmp.CompareFile(ref, out)
+	err = cmp.CompareFile(ans, out)
 	if err != nil {
 		return &Result{
 			Score:           0,

@@ -2,7 +2,10 @@ module ray_judge
 
 go 1.18
 
-require github.com/mholt/archiver/v3 v3.5.1
+require (
+	github.com/google/uuid v1.6.0
+	github.com/mholt/archiver/v3 v3.5.1
+)
 
 require (
 	github.com/andybalholm/brotli v1.0.4 // indirect

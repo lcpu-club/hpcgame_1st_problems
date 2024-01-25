@@ -34,7 +34,7 @@ var points = []PointConfigureInterface{
 
 func judge(j *StandardJudger, point int, conf interface{}) (*Result, error) {
 	pnt := conf.(*PointConfigure)
-	job, err := SlurmAlloc("-p", "GPU40G", "-N1", "-n8", "-t", pnt.TimeStr)
+	job, err := SlurmAlloc("-p", "GPU40G", "--gres=gpu:1", "-t", pnt.TimeStr)
 	if err != nil {
 		return nil, err
 	}
@@ -55,8 +55,10 @@ func judge(j *StandardJudger, point int, conf interface{}) (*Result, error) {
 		}
 	case "CMakeLists.txt":
 		{
+			fmt.Println("Compiling CMake")
 			cmd := job.ShellCommand(nil, "mkdir -p build; cd build; cmake ..; make; cp hello_* ..")
 			stdout, stderr, statusCode, err := WaitCommandAndGetOutput(cmd)
+			fmt.Println("Compiled CMake")
 			if err != nil || statusCode != 0 {
 				return &Result{
 					Score:           0,
@@ -67,13 +69,14 @@ func judge(j *StandardJudger, point int, conf interface{}) (*Result, error) {
 		}
 	}
 	cmd := job.Command(nil, "bash", GetProblemPath("do_test.sh"))
-	_, _, statusCode, err := WaitCommandAndGetOutput(cmd)
+	stdout, stderr, statusCode, err := WaitCommandAndGetOutput(cmd)
+	fmt.Printf("stdout: %s\nstderr: %s\n", stdout, stderr)
 	if statusCode == 1 {
 		return &Result{
 			Score:           0,
 			Message:         "Compile Error",
 			DetailedMessage: "compiled executable not found",
-		}, ErrCompileFailed
+		}, nil
 	}
 	if statusCode == 2 {
 		return &Result{

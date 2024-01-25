@@ -7,8 +7,10 @@ use (
 	./1th_logistic/judge
 	./1th_mul/judge
 	./1th_overlap/judge
+	./1th_p2g/judge
 	./1th_potato/judge
 	./1th_qa/judge
+	./1th_radiosity/judge
 	./1th_ray/judge
 	./_template/judge
 )

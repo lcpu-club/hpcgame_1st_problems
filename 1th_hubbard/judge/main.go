@@ -178,7 +178,7 @@ func before(j *StandardJudger) error {
 	if err != nil {
 		return err
 	}
-	stdout, stderr, stat, err := RunCommand("g++", "-O3", "-fopenmp", "-march=native", "-o", "answer", "answer.cpp")
+	stdout, stderr, stat, err := RunCommand("g++", "-O3", "-fopenmp", "-march=native", "--std=c++17", "-o", "answer", "answer.cpp")
 	if stat != 0 || err != nil {
 		defer j.Halt()
 		ReportMessage(ResultToMap(&Result{
