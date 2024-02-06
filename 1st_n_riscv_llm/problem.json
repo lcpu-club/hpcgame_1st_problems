@@ -1,0 +1,26 @@
+{
+  "$schema": "../schema.json",
+  "label": "hpc",
+  "submit": {
+    "upload": true,
+    "maxSize": 102400000000
+  },
+  "judge": {
+    "adapter": "hpc",
+    "config": {
+      "entrance": {
+        "script": "judge.sh",
+        "command": ""
+      },
+      "environment": {
+        "tags": [],
+        "exclude-tags": [],
+        "script-limits": {
+          "cpu": 200,
+          "memory": 4096
+        },
+        "estimated-resource": {}
+      }
+    }
+  }
+}

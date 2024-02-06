@@ -1,0 +1,203 @@
+{
+  "$schema": "../schema.json",
+  "label": "hpc",
+  "submit": {
+    "form": {
+      "files": [
+        {
+          "path": "answer.json",
+          "label": "Answer",
+          "type": {
+            "metadata": {
+              "items": [
+                {
+                  "key": "t1",
+                  "label": "1. ...能量效率最高的超级计算的能效达到...",
+                  "type": {
+                    "text": {}
+                  }
+                },
+                {
+                  "key": "t2.1",
+                  "label": "2.1. ...程序整体的加速比为____%...",
+                  "type": {
+                    "text": {}
+                  }
+                },
+                {
+                  "key": "t2.2",
+                  "label": "2.2. ...程序整体的加速比为____%...",
+                  "type": {
+                    "text": {}
+                  }
+                },
+                {
+                  "key": "t3",
+                  "label": "3. 以下哪个工具的作用与其他选项的区别最大？",
+                  "type": {
+                    "select": {
+                      "options": [
+                        "i. Meson",
+                        "ii. Autoconf",
+                        "iii. CMake",
+                        "iv. GCC"
+                      ]
+                    }
+                  }
+                },
+                {
+                  "key": "t4.1",
+                  "label": "4.1. ...MPI 提供的是___级别的并行...",
+                  "type": {
+                    "select": {
+                      "options": [
+                        "i. 线程",
+                        "ii. 进程"
+                      ]
+                    }
+                  }
+                },
+                {
+                  "key": "t4.2",
+                  "label": "4.2. ...OpenMP 提供的是___级别的并行...",
+                  "type": {
+                    "select": {
+                      "options": [
+                        "i. 线程",
+                        "ii. 进程"
+                      ]
+                    }
+                  }
+                },
+                {
+                  "key": "t4.3",
+                  "label": "4.3. ...___级别的并行更加轻量...",
+                  "type": {
+                    "select": {
+                      "options": [
+                        "i. 线程",
+                        "ii. 进程"
+                      ]
+                    }
+                  }
+                },
+                {
+                  "key": "t5.1",
+                  "label": "5.1. ...一条指令可以对最多___（填空）...",
+                  "type": {
+                    "text": {}
+                  }
+                },
+                {
+                  "key": "t5.2",
+                  "label": "5.2. ...Intel（以 Ice Lake SP 为例）...",
+                  "type": {
+                    "select": {
+                      "options": [
+                        "i. 在 CPU 中设计独立的 AVX512 运算单元，但有可能导致调用 AVX512 指令集时因功耗过大而降频",
+                        "ii. 复用两个 AVX2 运算单元执行 AVX512 运算"
+                      ]
+                    }
+                  }
+                },
+                {
+                  "key": "t5.3",
+                  "label": "5.3. ...AMD（以 ZEN4 架构为例）...",
+                  "type": {
+                    "select": {
+                      "options": [
+                        "i. 在 CPU 中设计独立的 AVX512 运算单元，但有可能导致调用 AVX512 指令集时因功耗过大而降频",
+                        "ii. 复用两个 AVX2 运算单元执行 AVX512 运算"
+                      ]
+                    }
+                  }
+                },
+                {
+                  "key": "t6",
+                  "label": "6. 以下哪个不是专门用于在 GPU 上设计并行计算程序的？ ",
+                  "type": {
+                    "select": {
+                      "options": [
+                        "i. OpenACC",
+                        "ii. CUDA",
+                        "iii. HIP",
+                        "iv. OpenGL"
+                      ]
+                    }
+                  }
+                },
+                {
+                  "key": "t7",
+                  "label": "7. 下面哪些描述是正确的？答案示例：i,ii,iii,iv",
+                  "type": {
+                    "text": {}
+                  }
+                },
+                {
+                  "key": "t8",
+                  "label": "8. 在高性能计算中，下列哪项技术不是用于节点间通信的？",
+                  "type": {
+                    "select": {
+                      "options": [
+                        "i. InfiniBand",
+                        "ii. Ethernet",
+                        "iii. NVLink",
+                        "iv. HBM"
+                      ]
+                    }
+                  }
+                },
+                {
+                  "key": "t9",
+                  "label": "9. 在高性能计算集群中，哪个工具通常用于作业调度和资源管理？",
+                  "type": {
+                    "select": {
+                      "options": [
+                        "i. 微信群",
+                        "ii. Slurm",
+                        "iii. Docker Swarm",
+                        "iv. Apache Mesos"
+                      ]
+                    }
+                  }
+                },
+                {
+                  "key": "t10",
+                  "label": "10. 在处理矩阵乘法的并行化时，通常会使用分块矩阵乘法来减少___，从而提高并行效率。",
+                  "type": {
+                    "select": {
+                      "options": [
+                        "i. 缓存未命中",
+                        "ii. 通信开销",
+                        "iii. 浮点运算错误",
+                        "iv. 硬盘 I/O 延迟"
+                      ]
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  },
+  "judge": {
+    "adapter": "hpc",
+    "config": {
+      "entrance": {
+        "script": "judge.sh",
+        "command": ""
+      },
+      "environment": {
+        "tags": [],
+        "exclude-tags": [],
+        "script-limits": {
+          "cpu": 200,
+          "memory": 4096
+        },
+        "estimated-resource": {}
+      }
+    }
+  }
+}

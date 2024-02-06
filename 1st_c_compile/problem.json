@@ -1,0 +1,46 @@
+{
+  "$schema": "../schema.json",
+  "label": "hpc",
+  "submit": {
+    "form": {
+      "files": [
+        {
+          "path": "Makefile",
+          "type": {
+            "editor": {
+              "language": "makefile"
+            }
+          },
+          "label": "Makefile"
+        },
+        {
+          "path": "CMakeLists.txt",
+          "type": {
+            "editor": {
+              "language": "cmake"
+            }
+          },
+          "label": "CMakeLists.txt"
+        }
+      ]
+    }
+  },
+  "judge": {
+    "adapter": "hpc",
+    "config": {
+      "entrance": {
+        "script": "judge.sh",
+        "command": ""
+      },
+      "environment": {
+        "tags": [],
+        "exclude-tags": [],
+        "script-limits": {
+          "cpu": 200,
+          "memory": 4096
+        },
+        "estimated-resource": {}
+      }
+    }
+  }
+}

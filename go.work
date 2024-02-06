@@ -1,16 +1,18 @@
 go 1.21.3
 
 use (
-	./1th_compile/judge
-	./1th_conway3d/judge
-	./1th_hubbard/judge
-	./1th_logistic/judge
-	./1th_mul/judge
-	./1th_overlap/judge
-	./1th_p2g/judge
-	./1th_potato/judge
-	./1th_qa/judge
-	./1th_radiosity/judge
-	./1th_ray/judge
 	./_template/judge
+	./1st_b_potato/judge
+	./1st_c_compile/judge
+	./1st_d_qa/judge
+	./1st_e_ray/judge
+	./1st_f_overlap/judge
+	./1st_g_conway3d/judge
+	./1st_h_mul/judge
+	./1st_i_logistic/judge
+	./1st_j_hubbard/judge
+	./1st_k_radiosity/judge
+	./1st_l_p2g/judge
+	./1st_m_riscv_openblas/judge
+	./1st_n_riscv_llm/judge
 )
